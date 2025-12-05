@@ -94,7 +94,6 @@ Verás un mensaje como este:
 
 Serving HTTP on :: port 8000 (http://[::]:8000/) ...
 
-NO CIERRES ESTA VENTANA
 
 ### Paso 2: Abrir en el Navegador DONDE TIENES EL PLUGIN CARGADO
 
