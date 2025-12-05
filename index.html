@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PackGuard - Avalanche Hackathon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"
+        type="application/javascript"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -200px;
+            left: -200px;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -150px;
+            right: -150px;
+            animation: float 15s infinite ease-in-out reverse;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            50% {
+                transform: translate(50px, 50px);
+            }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        .connection-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-connect {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            box-shadow: 0 8px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(245, 87, 108, 0.5);
+        }
+
+        .btn-connect:active {
+            transform: translateY(0);
+        }
+
+        #account,
+        #network {
+            color: white;
+            text-align: center;
+            margin-top: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        #account {
+            font-weight: 600;
+        }
+
+        #network {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .btn-register {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.5);
+        }
+
+        .btn-verify {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #4a5568;
+            box-shadow: 0 4px 15px rgba(168, 237, 234, 0.4);
+        }
+
+        .btn-verify:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(168, 237, 234, 0.5);
+        }
+
+        .btn-open {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(250, 112, 154, 0.4);
+        }
+
+        .btn-open:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(250, 112, 154, 0.5);
+        }
+
+        .result-box {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            min-height: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #result {
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-line;
+            font-weight: 500;
+        }
+
+        .emoji {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+
+        /* Loading animation */
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .loading {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎁 PackGuard</h1>
+        <p class="subtitle">Avalanche Hackathon</p>
+
+        <div class="connection-section">
+            <button class="btn btn-connect" onclick="connect()"><span>🔗 Conectar MetaMask</span></button>
+            <p id="account"></p>
+            <p id="network"></p>
+        </div>
+
+        <div class="input-group">
+            <label for="packId">ID del Sobre</label>
+            <input id="packId" placeholder="Ejemplo: PACK001" autocomplete="off">
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-register" onclick="registerPack()"><span>📦 Registrar Sobre</span></button>
+            <button class="btn btn-verify" onclick="verify()"><span>🔍 Verificar Sobre</span></button>
+            <button class="btn btn-open" onclick="openPack()"><span>🎉 Abrir Sobre</span></button>
+        </div>
+
+        <div class="result-box">
+            <p id="result">Selecciona una acción para comenzar</p>
+        </div>
+    </div>
+
+    <script>
+        let provider;
+        let signer;
+        let contract;
+
+        const contractAddress = "0xBE449d7A6Eadc62C1B8A6779c9BF40821552e249";
+        const abi = [
+            "function registerPack(string _id)",
+            "function openPack(string _id)",
+            "function verifyPack(string _id) public view returns (string)"
+        ];
+
+        async function connect() {
+            if (!window.ethereum) {
+                alert("❌ Por favor instala MetaMask para continuar");
+                return;
+            }
+
+            try {
+                document.getElementById("account").innerHTML = '<span class="loading">Conectando...</span>';
+
+                await ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+
+                const network = await provider.getNetwork();
+                const networkNames = {
+                    1: "Ethereum Mainnet",
+                    43114: "Avalanche C-Chain",
+                    43113: "Avalanche Fuji Testnet",
+                    5: "Goerli Testnet",
+                    11155111: "Sepolia Testnet"
+                };
+                const networkName = networkNames[network.chainId] || `Red desconocida (ID: ${network.chainId})`;
+
+                if (network.chainId !== 43113) {
+                    document.getElementById("account").innerHTML = '<span class="loading">Cambiando a Avalanche Fuji Testnet...</span>';
+                    document.getElementById("network").innerText = "Red actual: " + networkName;
+
+                    try {
+                        await ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0xa869' }],
+                        });
+
+                        provider = new ethers.providers.Web3Provider(window.ethereum);
+                        signer = provider.getSigner();
+
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            try {
+                                document.getElementById("account").innerHTML = '<span class="loading">Agregando Avalanche Fuji Testnet...</span>';
+
+                                await ethereum.request({
+                                    method: 'wallet_addEthereumChain',
+                                    params: [{
+                                        chainId: '0xa869',
+                                        chainName: 'Avalanche Fuji Testnet',
+                                        nativeCurrency: {
+                                            name: 'AVAX',
+                                            symbol: 'AVAX',
+                                            decimals: 18
+                                        },
+                                        rpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc'],
+                                        blockExplorerUrls: ['https://testnet.snowtrace.io/']
+                                    }]
+                                });
+
+                                provider = new ethers.providers.Web3Provider(window.ethereum);
+                                signer = provider.getSigner();
+
+                            } catch (addError) {
+                                document.getElementById("account").innerText = "❌ Error al agregar Avalanche";
+                                return;
+                            }
+                        } else {
+                            document.getElementById("account").innerText = "⚠️ Debes cambiar a Avalanche Fuji Testnet manualmente";
+                            document.getElementById("network").innerText = "Red actual: " + networkName;
+                            return;
+                        }
+                    }
+                }
+
+                const code = await provider.getCode(contractAddress);
+                if (code === "0x") {
+                    document.getElementById("account").innerHTML = "⚠️ <strong>Advertencia</strong><br>No hay contrato desplegado en esta dirección";
+                    document.getElementById("network").innerText = "Red: Avalanche Fuji Testnet";
+                    return;
+                }
+
+                contract = new ethers.Contract(contractAddress, abi, signer);
+
+                const address = await signer.getAddress();
+                const shortAddress = address.substring(0, 6) + "..." + address.substring(address.length - 4);
+
+                document.getElementById("account").innerHTML = "✅ <strong>Conectado</strong><br>Cuenta: " + shortAddress;
+                document.getElementById("network").innerText = "🌐 Red: Avalanche Fuji Testnet";
+                document.getElementById("result").innerText = "¡Conectado! Ahora puedes usar las funciones del contrato";
+            } catch (error) {
+                document.getElementById("account").innerText = "❌ Error: " + error.message;
+            }
+        }
+
+        async function registerPack() {
+            if (!contract) {
+                alert("❌ Primero debes conectar MetaMask");
+                return;
+            }
+            const id = document.getElementById("packId").value;
+            if (!id) {
+                alert("⚠️ Por favor ingresa un ID de sobre");
+                return;
+            }
+
+            // Primero verificar si el paquete ya existe
+            try {
+                document.getElementById("result").innerHTML = '<span class="loading">🔍 Verificando disponibilidad...</span>';
+                const existingPack = await contract.verifyPack(id);
+                const packStatusStr = existingPack.toString().trim();
+
+                // Si devuelve "FAKE PACK", significa que NO existe, así que podemos registrar
+                if (packStatusStr === "FAKE PACK") {
+                    console.log("Paquete no existe (FAKE PACK), procediendo al registro...");
+                }
+                // Si devuelve cualquier otra cosa no vacía, significa que YA EXISTE
+                else if (packStatusStr !== "") {
+                    document.getElementById("result").innerText =
+                        "⚠️ Este ID ya está registrado\n\n" +
+                        "El paquete '" + id + "' ya existe en el sistema.\n" +
+                        "Estado: " + packStatusStr + "\n" +
+                        "Por favor usa otro ID o verifica/abre este paquete.";
+                    return;
+                }
+
+            } catch (verifyError) {
+                // Si verifyPack falla, probablemente el paquete NO existe (esto es lo esperado)
+                // Continuamos con el registro solo si es CALL_EXCEPTION
+                if (verifyError.code !== "CALL_EXCEPTION") {
+                    document.getElementById("result").innerText = "❌ Error al verificar: " + verifyError.message;
+                    return;
+                }
+            }
+
+            // El paquete NO existe, proceder con el registro
+            try {
+                document.getElementById("result").innerHTML = '<span class="loading">📦 Registrando sobre...</span>';
+                const tx = await contract.registerPack(id);
+                document.getElementById("result").innerHTML = '<span class="loading">⏳ Esperando confirmación...</span>';
+                await tx.wait();
+                document.getElementById("result").innerText = "✅ SOBRE REGISTRADO: " + id;
+            } catch (error) {
+                if (error.code === "CALL_EXCEPTION") {
+                    document.getElementById("result").innerText =
+                        "⚠️ Error: El contrato no pudo procesar la solicitud.\n• El ID ya existe\n• Sin permisos\n• Red incorrecta";
+                } else if (error.code === 4001) {
+                    document.getElementById("result").innerText = "❌ Transacción rechazada";
+                } else {
+                    document.getElementById("result").innerText = "❌ Error: " + error.message;
+                }
+            }
+        }
+
+        async function verify() {
+            if (!contract) {
+                alert("❌ Primero debes conectar MetaMask");
+                return;
+            }
+            const id = document.getElementById("packId").value;
+            if (!id) {
+                alert("⚠️ Por favor ingresa un ID de sobre");
+                return;
+            }
+            try {
+                document.getElementById("result").innerHTML = '<span class="loading">🔍 Verificando...</span>';
+                const result = await contract.verifyPack(id);
+                document.getElementById("result").innerText = "📋 Resultado: " + result;
+            } catch (error) {
+                if (error.code === "CALL_EXCEPTION") {
+                    document.getElementById("result").innerText =
+                        "⚠️ Error: El ID no existe o función no disponible";
+                } else {
+                    document.getElementById("result").innerText = "❌ Error: " + error.message;
+                }
+            }
+        }
+
+        async function openPack() {
+            if (!contract) {
+                alert("❌ Primero debes conectar MetaMask");
+                return;
+            }
+            const id = document.getElementById("packId").value;
+            if (!id) {
+                alert("⚠️ Por favor ingresa un ID de sobre");
+                return;
+            }
+
+            // Verificar si el sobre existe antes de intentar abrirlo
+            try {
+                document.getElementById("result").innerHTML = '<span class="loading">🔍 Verificando sobre...</span>';
+                const packStatus = await contract.verifyPack(id);
+
+                // El sobre existe, verificar si ya está abierto
+                const statusStr = packStatus.toString().toLowerCase();
+                if (statusStr.includes("abierto") || statusStr.includes("opened") || statusStr.includes("open")) {
+                    document.getElementById("result").innerText =
+                        "⚠️ Este sobre ya está abierto\n\n" +
+                        "El paquete '" + id + "' ya fue abierto previamente.\n" +
+                        "Estado actual: " + packStatus;
+                    return;
+                }
+
+                // El sobre existe y está cerrado, podemos continuar
+
+            } catch (verifyError) {
+                // Si verifyPack falla, el sobre NO existe
+                if (verifyError.code === "CALL_EXCEPTION") {
+                    document.getElementById("result").innerText =
+                        "⚠️ Este sobre no existe\n\n" +
+                        "El paquete '" + id + "' no está registrado.\n" +
+                        "Por favor verifica el ID o regístralo primero.";
+                    return;
+                } else {
+                    document.getElementById("result").innerText = "❌ Error al verificar: " + verifyError.message;
+                    return;
+                }
+            }
+
+            // El sobre existe, intentar abrirlo
+            try {
+                document.getElementById("result").innerHTML = '<span class="loading">🎁 Abriendo sobre...</span>';
+                const tx = await contract.openPack(id);
+                document.getElementById("result").innerHTML = '<span class="loading">⏳ Esperando confirmación...</span>';
+                await tx.wait();
+                document.getElementById("result").innerText = "🎉 ¡SOBRE ABIERTO! ID: " + id;
+            } catch (error) {
+                if (error.code === "CALL_EXCEPTION") {
+                    document.getElementById("result").innerText =
+                        "⚠️ Error: El sobre no existe, ya fue abierto o sin permisos";
+                } else if (error.code === 4001) {
+                    document.getElementById("result").innerText = "❌ Transacción rechazada";
+                } else {
+                    document.getElementById("result").innerText = "❌ Error: " + error.message;
+                }
+            }
+        }
+    </script>
+
+</body>
+
+</html>

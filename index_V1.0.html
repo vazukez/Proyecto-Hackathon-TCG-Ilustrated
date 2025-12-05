@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>PackGuard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"
+        type="application/javascript"></script>
+</head>
+
+<body>
+    <h1>PackGuard - Avalanche Hackathon</h1>
+
+    <button onclick="connect()">Conectar MetaMask</button>
+    <p id="account"></p>
+    <p id="network" style="color: #666; font-size: 0.9em;"></p>
+
+    <input id="packId" placeholder="PACK001">
+    <br><br>
+
+    <button onclick="verify()">Verificar sobre</button>
+    <button onclick="openPack()">Abrir sobre</button>
+
+    <p id="result"></p>
+
+    <script>
+        let provider;
+        let signer;
+        let contract;
+
+        const contractAddress = "0xBE449d7A6Eadc62C1B8A6779c9BF40821552e249";
+        const abi = [
+            "function registerPack(string _id)",
+            "function openPack(string _id)",
+            "function verifyPack(string _id) public view returns (string)"
+        ];
+
+        async function connect() {
+            if (!window.ethereum) {
+                alert("Instala MetaMask");
+                return;
+            }
+
+            try {
+                document.getElementById("account").innerText = "Conectando...";
+
+                await ethereum.request({ method: 'eth_requestAccounts' });
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+
+                // Obtener información de red
+                const network = await provider.getNetwork();
+                const networkNames = {
+                    1: "Ethereum Mainnet",
+                    43114: "Avalanche C-Chain",
+                    43113: "Avalanche Fuji Testnet",
+                    5: "Goerli Testnet",
+                    11155111: "Sepolia Testnet"
+                };
+                const networkName = networkNames[network.chainId] || `Red desconocida (ID: ${network.chainId})`;
+
+                // Si no está en Avalanche C-Chain, intentar cambiar automáticamente
+                if (network.chainId !== 43113) {
+                    document.getElementById("account").innerText = "Cambiando a Avalanche Fuji Testnet...";
+                    document.getElementById("network").innerText = "Red actual: " + networkName;
+
+                    try {
+                        // Intentar cambiar a Avalanche Fuji Testnet
+                        await ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0xa869' }], // 43113 en hexadecimal
+                        });
+
+                        // Actualizar provider y signer después del cambio
+                        provider = new ethers.providers.Web3Provider(window.ethereum);
+                        signer = provider.getSigner();
+
+                    } catch (switchError) {
+                        // Si la red no existe en MetaMask (error 4902), agregarla
+                        if (switchError.code === 4902) {
+                            try {
+                                document.getElementById("account").innerText = "Agregando Avalanche Fuji Testnet a MetaMask...";
+
+                                await ethereum.request({
+                                    method: 'wallet_addEthereumChain',
+                                    params: [{
+                                        chainId: '0xa869',
+                                        chainName: 'Avalanche Fuji Testnet',
+                                        nativeCurrency: {
+                                            name: 'AVAX',
+                                            symbol: 'AVAX',
+                                            decimals: 18
+                                        },
+                                        rpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc'],
+                                        blockExplorerUrls: ['https://testnet.snowtrace.io/']
+                                    }]
+                                });
+
+                                // Actualizar provider y signer después de agregar la red
+                                provider = new ethers.providers.Web3Provider(window.ethereum);
+                                signer = provider.getSigner();
+
+                            } catch (addError) {
+                                document.getElementById("account").innerText = "❌ Error al agregar Avalanche: " + addError.message;
+                                document.getElementById("account").style.color = "red";
+                                return;
+                            }
+                        } else {
+                            // El usuario rechazó el cambio de red
+                            document.getElementById("account").innerText = "❌ Debes cambiar a Avalanche Fuji Testnet manualmente";
+                            document.getElementById("account").style.color = "orange";
+                            document.getElementById("network").innerText = "Red actual: " + networkName;
+                            return;
+                        }
+                    }
+                }
+
+                // Verificar si hay código en la dirección del contrato
+                const code = await provider.getCode(contractAddress);
+                if (code === "0x") {
+                    document.getElementById("account").innerHTML =
+                        "⚠️ <strong>Advertencia</strong><br>No hay contrato desplegado en esta dirección en Avalanche Fuji Testnet";
+                    document.getElementById("account").style.color = "orange";
+                    document.getElementById("network").innerText = "Red: Avalanche Fuji Testnet";
+                    return;
+                }
+
+                contract = new ethers.Contract(contractAddress, abi, signer);
+
+                const address = await signer.getAddress();
+                const shortAddress = address.substring(0, 6) + "..." + address.substring(address.length - 4);
+
+                document.getElementById("account").innerHTML =
+                    "✅ <strong>Conectado</strong><br>Cuenta: " + shortAddress;
+                document.getElementById("account").style.color = "green";
+                document.getElementById("network").innerText = "Red: Avalanche Fuji Testnet ✅";
+            } catch (error) {
+                document.getElementById("account").innerText = "Error: " + error.message;
+                document.getElementById("account").style.color = "red";
+            }
+        }
+
+        async function verify() {
+            if (!contract) {
+                alert("Primero debes conectar MetaMask");
+                return;
+            }
+            const id = document.getElementById("packId").value;
+            if (!id) {
+                alert("Por favor ingresa un ID de sobre");
+                return;
+            }
+            try {
+                document.getElementById("result").innerText = "Verificando...";
+                const result = await contract.verifyPack(id);
+                document.getElementById("result").innerText = result;
+            } catch (error) {
+                if (error.code === "CALL_EXCEPTION") {
+                    document.getElementById("result").innerText =
+                        "⚠️ Error: El contrato no pudo procesar la solicitud. Posibles causas:\n" +
+                        "• El ID del sobre no existe\n" +
+                        "• La función no está disponible en este contrato\n" +
+                        "• Estás en la red incorrecta";
+                } else {
+                    document.getElementById("result").innerText = "Error: " + error.message;
+                }
+            }
+        }
+
+        async function openPack() {
+            if (!contract) {
+                alert("Primero debes conectar MetaMask");
+                return;
+            }
+            const id = document.getElementById("packId").value;
+            if (!id) {
+                alert("Por favor ingresa un ID de sobre");
+                return;
+            }
+            try {
+                document.getElementById("result").innerText = "Procesando...";
+                const tx = await contract.openPack(id);
+                await tx.wait();
+                document.getElementById("result").innerText = "SOBRE ABIERTO ✅";
+            } catch (error) {
+                if (error.code === "CALL_EXCEPTION") {
+                    document.getElementById("result").innerText =
+                        "⚠️ Error: El contrato no pudo procesar la solicitud. Posibles causas:\n" +
+                        "• El ID del sobre no existe o ya fue abierto\n" +
+                        "• No tienes permisos para abrir este sobre\n" +
+                        "• Estás en la red incorrecta";
+                } else {
+                    document.getElementById("result").innerText = "Error: " + error.message;
+                }
+            }
+        }
+    </script>
+
+</body>
+
+</html>
